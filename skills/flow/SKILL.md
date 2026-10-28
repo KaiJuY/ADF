@@ -17,13 +17,13 @@ You are the owner. Read `../../references/flow.md` first. It defines the stages,
 
 | Stage | Skill | Stop for Allen |
 |---|---|---|
-| A | `/adf:grill` | Each round of questions. Issue draft. |
+| A | `/adf:grill` | Each round of questions. Working summary. Issue draft. |
 | B | `/adf:plan` | Approve the split. |
-| C | `/adf:propose` | No |
-| D+E | `/adf:challenge` | Only if the judge returns NOT READY twice. |
+| C | `/adf:propose` | A choice with two or more working answers. A conflict with the issue. |
+| D+E | `/adf:challenge` | Each ESCALATE finding. The judge returns NOT READY twice. |
 | F | `/adf:build` | No |
 | G | `/adf:clean` | Approve deletions of public API. |
-| H | `/adf:gate` | No, unless a failure is classified UNKNOWN. |
+| H | `/adf:gate` | A failure classified UNKNOWN. A public change that the proposal did not plan. |
 | I | `/adf:integrate` | Before each hardware command that the profile does not authorize. |
 | J | `/adf:close` | Approve the merge to the main branch. |
 

@@ -30,9 +30,14 @@ Write the body in Traditional Chinese. Follow [writing-standard.md](writing-stan
 ## 不做的事
 - <out of scope>
 
+## 考慮過的做法
+- <rejected choice>：<why Allen rejected it>
+
 ## 決策紀錄
 - <decision from the grill session, one line each>
 ```
+
+Keep 考慮過的做法 even when it has one item. Stage C reads it. The proposal has no other source for rejected choices. Write "無" when no choice was rejected.
 
 For a bug, add before 驗收條件:
 

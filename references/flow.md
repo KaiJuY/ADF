@@ -4,13 +4,13 @@ The **owner** is the main agent that talks with Allen. The owner holds the whole
 
 | Stage | Skill | Work | Exit condition | Who decides |
 |---|---|---|---|---|
-| A. Intake | `/adf:grill` | Clarify the request. Create or update the GitHub issue. | The issue has numbered acceptance criteria. | Allen |
+| A. Intake | `/adf:grill` | Clarify the request. Two fresh reviewers test the issue draft. Create or update the GitHub issue. | The issue has numbered acceptance criteria and the section 考慮過的做法. | Allen |
 | B. Split | `/adf:plan` | Split the issue into units. Find which units are independent. Plan the worktrees. | Each unit has a file scope and a list of dependencies. | Owner, Allen approves |
-| C. Proposal | `/adf:propose` | Write the proposal: types, signatures, modules, tests. Verify each claim about existing code. | Every claim about existing code has evidence. | Owner |
-| D+E. Challenge | `/adf:challenge` | 2 to 4 reviewers attack the proposal. A judge sorts the findings. | Zero blocker and zero major findings. | Judge, owner confirms |
+| C. Proposal | `/adf:propose` | Write the proposal: types, signatures, modules, files, tests. Verify each claim about existing code. Compare the proposal with the issue. | Every claim about existing code has evidence. No design choice is left to the implementer. Each conflict with the issue has Allen's decision. | Owner. Allen decides a choice with two or more working answers. |
+| D+E. Challenge | `/adf:challenge` | 3 to 5 reviewers attack the proposal. One reviewer reads the proposal without the issue. A judge sorts the findings. The owner resolves each finding. | Zero blocker and zero major findings. Every reviewer ran. | Judge, owner confirms. Allen decides each ESCALATE finding. |
 | F. Build | `/adf:build` | Implementers work in their own worktrees. Light code review. Unit tests. | Unit tests pass and the test baseline is met. | Owner |
 | G. Clean | `/adf:clean` | Remove dead code, duplicate logic, and comments that break the rules. Merge the worktrees. | The owner accepted each deletion. The merge has no conflict. | Owner |
-| H. Gate | `/adf:gate` | Unit tests, then CRAP, then mutation testing. Two reviewers read the merged code. | All three gates pass. Reviewer conflicts are resolved. | Owner |
+| H. Gate | `/adf:gate` | Unit tests, then CRAP, then mutation testing. Two reviewers read the merged code. A drift reviewer compares the proposal with the merged code. | All three gates pass. Reviewer conflicts are resolved. Each drift difference has a decision. | Owner. Allen decides a public change that the proposal did not plan. |
 | I. Integrate | `/adf:integrate` | Drive the application like a user. Use real hardware when the profile says so. | Behavior matches the expected behavior. | Owner |
 | J. Close | `/adf:close` | Merge to the main branch. Close the issue. Write the decision log summary. | The issue is closed with a link to the merge commit. | Allen |
 
