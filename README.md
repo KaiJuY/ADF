@@ -7,17 +7,19 @@ ADF 是 Allen 的開發流程，做成一個 Claude Code plugin。它管理從 i
 在 Claude Code 中執行：
 
 ```
-/plugin marketplace add C:\Users\AllenY\Desktop\WorkSpace\Git\ADF
-/plugin install adf@adf-local
+/plugin marketplace add KaiJuY/ADF
+/plugin install adf@adf
 ```
 
-安裝品質關卡工具（每台機器一次）：
+開發 ADF 本身時，可以改用本機 clone 的路徑：`/plugin marketplace add <clone 的路徑>`。
+
+安裝品質關卡工具（每台機器一次）。`<ADF>` 是 plugin 所在的資料夾：從 GitHub 安裝時是 `%USERPROFILE%\.claude\plugins\marketplaces\adf`；用本機 clone 時就是 clone 的路徑。
 
 ```powershell
-& "C:\Users\AllenY\Desktop\WorkSpace\Git\ADF\scripts\install-tools.ps1"
+& "<ADF>\scripts\install-tools.ps1"
 ```
 
-工具裝在 `ADF/.tools`，不裝全域。
+工具裝在 `<ADF>\.tools`，不裝全域。需要 .NET SDK 8 或更新的版本。
 
 ## 指令
 
