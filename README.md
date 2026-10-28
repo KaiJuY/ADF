@@ -32,20 +32,20 @@ $adf = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\adf\adf" -Director
 | 理解 | `/adf:how`、`/adf:why`、`/adf:plain`、`/adf:recall` | 程式怎麼運作、為什麼這樣設計、白話重述、回到上次進度 |
 | 流程 | `/adf:flow #n`、`/adf:status` | 跑完整流程、看目前在哪一關 |
 | 各階段 | `/adf:plan`、`/adf:propose`、`/adf:challenge`、`/adf:build`、`/adf:clean`、`/adf:gate`、`/adf:integrate`、`/adf:close` | B 到 J |
-| 技術債 | `/adf:scan`、`/adf:debt` | 建立基線、修一項技術債 |
+| 技術債 | `/adf:scan`、`/adf:debt`、`/adf:drift` | 建立基線、修一項技術債、比對提案和程式碼 |
 | 其他 | `/adf:log`、`/adf:learn`、`/adf:write` | 決策紀錄、把糾正變成規則、文件標準 |
 
 ## 流程
 
 | 階段 | 指令 | 通過條件 |
 |---|---|---|
-| A 進件 | `/adf:grill` | issue 有編號的驗收條件 |
+| A 進件 | `/adf:grill` | issue 有編號的驗收條件和「考慮過的做法」，草稿經過兩個新開的審查者檢查 |
 | B 拆解 | `/adf:plan` | 每個單元有檔案範圍和相依關係 |
-| C 提案 | `/adf:propose` | 每個對既有程式碼的斷言都有證據 |
-| D+E 對抗審查 | `/adf:challenge` | blocker 和 major 都是 0 |
+| C 提案 | `/adf:propose` | 每個對既有程式碼的斷言都有證據，沒有設計選擇留給實作者，和 issue 的衝突都由 Allen 決定 |
+| D+E 對抗審查 | `/adf:challenge` | blocker 和 major 都是 0，每個審查者都有執行，每項 finding 都有處理結果 |
 | F 實作 | `/adf:build` | 單元測試通過，測試基本盤達成 |
 | G 清理 | `/adf:clean` | 刪除項目經 owner 確認，merge 無衝突 |
-| H 關卡 | `/adf:gate` | 單元測試、CRAP、變異測試都通過 |
+| H 關卡 | `/adf:gate` | 單元測試、CRAP、變異測試都通過，提案和合併後的程式碼的差異都有決定 |
 | I 整合 | `/adf:integrate` | 行為和預期一致 |
 | J 結案 | `/adf:close` | issue 已關閉並附上 merge commit |
 
@@ -62,8 +62,9 @@ $adf = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\adf\adf" -Director
 |---|---|---|
 | `.adf/profile.json`、`.adf/profile.md` | 專案設定與專案特有的規則 | 是 |
 | `.adf/baseline/` | CRAP、變異測試、測試清單的基線 | 是 |
-| `.adf/proposals/`、`.adf/scenarios/`、`.adf/log/` | 提案、整合測試情境、決策紀錄 | 是 |
-| `.adf/out/` | 每次關卡的輸出 | 否 |
+| `.adf/proposals/`、`.adf/scenarios/`、`.adf/log/` | 提案和審查處理結果（`<n>.review.md`）、整合測試情境、決策紀錄 | 是 |
+| `.adf/drafts/` | stage A 的 issue 草稿，建立 issue 後刪除 | 否 |
+| `.adf/out/` | 每次關卡和 drift 檢查的輸出 | 否 |
 
 ## 工具
 

@@ -13,7 +13,7 @@ If `.adf/profile.json` does not exist:
 2. Find paths to skip: generated code, decompiled code, third-party code.
 3. Copy `../../templates/profile.json` and `../../templates/profile.md` to `.adf/` and fill them in.
 4. Ask Allen only for decisions: release frameworks, hardware facts, authorized commands. Find everything else yourself.
-5. Add `.adf/out/` to `.gitignore`.
+5. Add `.adf/out/` and `.adf/drafts/` to `.gitignore`.
 
 ## 2. Tools
 

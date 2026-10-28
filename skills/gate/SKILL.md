@@ -1,6 +1,6 @@
 ---
 name: gate
-description: ADF stage H. Run the quality gates - unit tests, CRAP and changed-line coverage, mutation testing - then two post-merge reviewers. Use for /adf:gate #<n>, or /adf:gate --release before a release (every target framework).
+description: ADF stage H. Run the quality gates - unit tests, CRAP and changed-line coverage, mutation testing - then two post-merge reviewers and a proposal drift check. Use for /adf:gate #<n>, or /adf:gate --release before a release (every target framework).
 ---
 
 # Gate (stage H)
@@ -48,6 +48,12 @@ After all gates pass, dispatch in parallel, in one message:
 - `adf:structure-reviewer` (give it the CRAP JSON path from the gate output)
 
 When the two reviewers disagree, open the file on the integration branch and decide. Log the decision.
+
+## 4. Proposal drift
+
+Run `/adf:drift #<n>`. You can dispatch its `adf:drift-reviewer` in the same message as the two reviewers in step 3. Stage H passes when each difference has a decision.
+
+Skip this step when stage C was skipped. The decision log has the reason.
 
 ## Next
 
