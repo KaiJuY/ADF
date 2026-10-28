@@ -1,7 +1,9 @@
-# Installs the pinned ADF tools into <ADF>/.tools. Safe to run again.
+# Installs the pinned ADF tools into %USERPROFILE%\.adf\tools (or $env:ADF_TOOLS). Safe to run again.
+# The folder is outside the plugin, so a plugin update does not remove the tools.
 $ErrorActionPreference = 'Stop'
 
-$toolPath = Join-Path (Split-Path $PSScriptRoot -Parent) '.tools'
+Import-Module (Join-Path $PSScriptRoot 'AdfCommon.psm1') -Force
+$toolPath = Get-AdfToolDirectory
 $tools = @(
     @{ Id = 'dotnet-reportgenerator-globaltool'; Version = '5.5.12'; Exe = 'reportgenerator.exe' },
     # 5.0.0 ships only a net10.0 build. Move to it after the .NET 10 SDK is installed.

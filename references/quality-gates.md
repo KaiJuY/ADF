@@ -17,7 +17,7 @@ The script `scripts/adf-gate.ps1` runs all three. Each gate also has its own scr
 | Stryker.NET (`dotnet-stryker`) | 4.16.0 (5.0.0 needs the .NET 10 SDK) | github.com/stryker-mutator/stryker-net | Mutation testing |
 | FlaUI (`FlaUI.UIA3`) | 5.0.0 | github.com/FlaUI/FlaUI | UI automation for WPF in stage I |
 
-`scripts/install-tools.ps1` installs ReportGenerator and Stryker.NET into `ADF/.tools`. ADF does not install global tools. A test project needs the `coverlet.collector` package. `/adf:scan` reports the projects that do not have it.
+`scripts/install-tools.ps1` installs ReportGenerator and Stryker.NET into `%USERPROFILE%\.adf\tools` (or `$env:ADF_TOOLS`). The folder is outside the plugin, so a plugin update keeps the tools. ADF does not install global tools. A test project needs the `coverlet.collector` package. `/adf:scan` reports the projects that do not have it.
 
 ## Gate 1: unit tests
 

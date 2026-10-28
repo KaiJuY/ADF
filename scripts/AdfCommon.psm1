@@ -1,13 +1,15 @@
 # Shared functions for the ADF gate scripts. Windows PowerShell 5.1 compatible.
 Set-StrictMode -Version 2.0
 
-$script:AdfRoot = Split-Path $PSScriptRoot -Parent
-$script:ToolPath = Join-Path $script:AdfRoot '.tools'
+function Get-AdfToolDirectory {
+    if ($env:ADF_TOOLS) { return $env:ADF_TOOLS }
+    return Join-Path $env:USERPROFILE '.adf\tools'
+}
 
 function Get-AdfToolPath([string]$exeName) {
-    $exe = Join-Path $script:ToolPath $exeName
+    $exe = Join-Path (Get-AdfToolDirectory) $exeName
     if (-not (Test-Path $exe)) {
-        throw "Tool not found: $exe. Run $script:AdfRoot\scripts\install-tools.ps1"
+        throw "Tool not found: $exe. Run $PSScriptRoot\install-tools.ps1"
     }
     return $exe
 }
@@ -161,4 +163,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolPath, Get-AdfProfile, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
