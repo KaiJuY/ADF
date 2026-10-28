@@ -1,0 +1,8 @@
+{
+  "name": "adf-local",
+  "owner": { "name": "Allen" },
+  "description": "Local marketplace for ADF.",
+  "plugins": [
+    { "name": "adf", "source": "./", "description": "AllenDevelopFlow", "version": "0.1.0" }
+  ]
+}

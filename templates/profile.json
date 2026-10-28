@@ -1,0 +1,24 @@
+{
+  "baseBranch": "main",
+  "solution": "<Name>.sln",
+  "mainFramework": "net8.0",
+  "releaseFrameworks": ["net8.0"],
+  "testProjects": [
+    "tests/<Name>.Tests/<Name>.Tests.csproj"
+  ],
+  "sourceProjects": [
+    "src/<Name>/<Name>.csproj"
+  ],
+  "exclude": [
+    "**/obj/**",
+    "**/bin/**",
+    "**/*.g.cs",
+    "**/*.g.i.cs",
+    "**/*.Designer.cs"
+  ],
+  "limits": {
+    "crap": 12,
+    "complexity": 12,
+    "changedLineCoverage": 0.9
+  }
+}
