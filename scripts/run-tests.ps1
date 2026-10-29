@@ -38,7 +38,7 @@ foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
         '--logger', "trx;LogFileName=$name.trx") | Out-File (Join-Path $runDir "$name.log") -Encoding utf8
     $exitCode = $LASTEXITCODE
 
-    $trx = Get-ChildItem $projectDir -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue | Select-Object -First 1
+    $trx = Find-AdfFiles $projectDir '*.trx' | Select-Object -First 1
     $total = 0; $passed = 0; $failed = 0; $failedNames = @()
     if ($trx) {
         [xml]$doc = Get-Content $trx.FullName -Raw -Encoding UTF8
