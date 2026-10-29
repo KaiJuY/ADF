@@ -24,7 +24,6 @@ if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
 # A source project referenced by several test projects is mutated once per test project.
 # A mutant counts only if it survived every one of those runs: one test project that kills it is enough.
 function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
-    $testProjects = @(Get-AdfTestProjects $adfProfile | Where-Object { Test-SupportsFramework $_ $Framework })
     $survivors = @()
     foreach ($sourceProject in $adfProfile.sourceProjects) {
         $sourceName = Split-Path $sourceProject -Leaf
@@ -36,15 +35,17 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
         }
 
         $runs = @()
-        foreach ($testProject in $testProjects) {
+        foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
+            $projectFramework = Get-RunFramework $testProject $Framework $adfProfile.mainFramework
+            if (-not $projectFramework) { continue }
             $testPath = Join-Path $Repo $testProject.Path
             $references = Get-Content $testPath -Raw
             if ($references -notmatch [regex]::Escape($sourceName)) { continue }
 
             $projectOut = Join-Path $passDir ([System.IO.Path]::GetFileNameWithoutExtension($testProject.Path) + '__' + [System.IO.Path]::GetFileNameWithoutExtension($sourceName))
-            $arguments = @('-tp', $testPath, '-p', $sourceName, '--target-framework', $Framework,
+            $arguments = @('-tp', $testPath, '-p', $sourceName, '--target-framework', $projectFramework,
                 '-r', 'Json', '-r', 'Html', '-O', $projectOut, '--skip-version-check')
-            if ($Framework -match '^net\d{2,3}$') { $arguments += @('-s', (Join-Path $Repo $adfProfile.solution)) }
+            if ($projectFramework -match '^net\d{2,3}$') { $arguments += @('-s', (Join-Path $Repo $adfProfile.solution)) }
             if ($Base) { $arguments += "--since:$Base" }
             foreach ($target in $targets) {
                 $full = Join-Path $Repo $target

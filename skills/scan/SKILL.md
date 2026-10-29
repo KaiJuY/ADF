@@ -12,7 +12,7 @@ If `.adf/profile.json` does not exist:
 1. Find the solution, the test projects, the source projects, and the target frameworks of each project (`<TargetFramework>` and `<TargetFrameworks>`).
 2. Find paths to skip: generated code, decompiled code, third-party code.
 3. Copy `../../templates/profile.json` and `../../templates/profile.md` to `.adf/` and fill them in.
-   - A test project entry is a path. If the test project does not build for every framework in `mainFramework` and `releaseFrameworks`, write it as `{ "path": "...", "frameworks": ["net8.0-windows"] }`. A run for a framework that is not in that list skips the project.
+   - A test project entry is a path. If the test project does not build for every framework in `mainFramework` and `releaseFrameworks`, write it as `{ "path": "...", "frameworks": ["net8.0-windows"] }`. The main framework run uses the first framework in that list. A run for another framework that is not in the list skips the project.
 4. Ask Allen only for decisions: release frameworks, hardware facts, authorized commands. Find everything else yourself.
 5. Add `.adf/out/` and `.adf/drafts/` to `.gitignore`.
 

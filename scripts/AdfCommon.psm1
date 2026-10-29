@@ -40,6 +40,15 @@ function Test-SupportsFramework($testProject, [string]$framework) {
     return ($null -eq $testProject.Frameworks) -or ($testProject.Frameworks -contains $framework)
 }
 
+# Returns the framework to run a test project with, or $null to skip it.
+# In the main framework run, a project that does not list the main framework runs with its own first framework,
+# so scan and the development gates still cover it. Other runs skip it; the run for its own framework covers it.
+function Get-RunFramework($testProject, [string]$framework, [string]$mainFramework) {
+    if (Test-SupportsFramework $testProject $framework) { return $framework }
+    if ($framework -eq $mainFramework -and @($testProject.Frameworks).Count -gt 0) { return $testProject.Frameworks[0] }
+    return $null
+}
+
 # Runs a native program and returns its stdout and stderr lines as strings; the caller checks $LASTEXITCODE.
 # Windows PowerShell 5.1 turns a stderr line into a terminating error under $ErrorActionPreference = 'Stop'.
 function Invoke-AdfNative([string]$exe, [string[]]$arguments) {
@@ -188,4 +197,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Test-SupportsFramework, Invoke-AdfNative, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
