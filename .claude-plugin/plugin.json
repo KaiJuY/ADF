@@ -1,7 +1,7 @@
 {
   "name": "adf",
   "displayName": "ADF (AllenDevelopFlow)",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Allen's development flow: issue intake, proposal review, worktree implementation, quality gates (unit, CRAP, mutation), integration, close.",
   "author": { "name": "Allen" },
   "license": "UNLICENSED"

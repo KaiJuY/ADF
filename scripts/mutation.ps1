@@ -21,23 +21,27 @@ $stryker = Get-AdfToolPath 'dotnet-stryker.exe'
 $runDir = Join-Path $OutDir "mutation-$Framework"
 if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
 
+# A source project referenced by several test projects is mutated once per test project.
+# A mutant counts only if it survived every one of those runs: one test project that kills it is enough.
 function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
+    $testProjects = @(Get-AdfTestProjects $adfProfile | Where-Object { Test-SupportsFramework $_ $Framework })
     $survivors = @()
-    foreach ($testProject in $adfProfile.testProjects) {
-        $testPath = Join-Path $Repo $testProject
-        $references = Get-Content $testPath -Raw
-        foreach ($sourceProject in $adfProfile.sourceProjects) {
-            $sourceName = Split-Path $sourceProject -Leaf
+    foreach ($sourceProject in $adfProfile.sourceProjects) {
+        $sourceName = Split-Path $sourceProject -Leaf
+        $sourceDir = (Split-Path $sourceProject -Parent).Replace('\', '/').ToLowerInvariant() + '/'
+        $targets = @()
+        if ($onlyFiles) {
+            $targets = @($onlyFiles | Where-Object { $_.StartsWith($sourceDir) })
+            if ($targets.Count -eq 0) { continue }
+        }
+
+        $runs = @()
+        foreach ($testProject in $testProjects) {
+            $testPath = Join-Path $Repo $testProject.Path
+            $references = Get-Content $testPath -Raw
             if ($references -notmatch [regex]::Escape($sourceName)) { continue }
 
-            $sourceDir = (Split-Path $sourceProject -Parent).Replace('\', '/').ToLowerInvariant() + '/'
-            $targets = @()
-            if ($onlyFiles) {
-                $targets = @($onlyFiles | Where-Object { $_.StartsWith($sourceDir) })
-                if ($targets.Count -eq 0) { continue }
-            }
-
-            $projectOut = Join-Path $passDir ([System.IO.Path]::GetFileNameWithoutExtension($testProject) + '__' + [System.IO.Path]::GetFileNameWithoutExtension($sourceName))
+            $projectOut = Join-Path $passDir ([System.IO.Path]::GetFileNameWithoutExtension($testProject.Path) + '__' + [System.IO.Path]::GetFileNameWithoutExtension($sourceName))
             $arguments = @('-tp', $testPath, '-p', $sourceName, '--target-framework', $Framework,
                 '-r', 'Json', '-r', 'Html', '-O', $projectOut, '--skip-version-check')
             if ($Framework -match '^net\d{2,3}$') { $arguments += @('-s', (Join-Path $Repo $adfProfile.solution)) }
@@ -52,31 +56,48 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
             New-Item -ItemType Directory -Force $projectOut | Out-Null
             $log = Join-Path $projectOut 'stryker.log'
             Push-Location (Split-Path $testPath -Parent)
-            try { & $stryker @arguments *> $log }
+            try { Invoke-AdfNative $stryker $arguments | Out-File $log -Encoding utf8 }
             finally { Pop-Location }
-            if ($LASTEXITCODE -ne 0) { throw "Stryker failed for $testProject -> $sourceName (exit $LASTEXITCODE). Log: $log" }
+            if ($LASTEXITCODE -ne 0) { throw "Stryker failed for $($testProject.Path) -> $sourceName (exit $LASTEXITCODE). Log: $log" }
             Get-Content $log | Where-Object { $_ -match 'final mutation score|unable to calculate' } | ForEach-Object { Write-Host "  $sourceName $_" }
 
             $report = Get-ChildItem $projectOut -Recurse -Filter 'mutation-report.json' | Select-Object -First 1
             if (-not $report) { continue }
-            $json = Get-Content $report.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-            foreach ($fileProperty in $json.files.PSObject.Properties) {
-                $repoPath = ConvertTo-RepoPath $Repo $fileProperty.Name
-                foreach ($mutant in $fileProperty.Value.mutants) {
-                    if ($mutant.status -ne 'Survived' -and $mutant.status -ne 'NoCoverage') { continue }
-                    $isStatic = $false
-                    if ($mutant.PSObject.Properties['static']) { $isStatic = [bool]$mutant.static }
-                    $survivors += [pscustomobject]@{
-                        File = $repoPath; Line = [int]$mutant.location.start.line
-                        Mutator = $mutant.mutatorName; Status = $mutant.status; Replacement = $mutant.replacement
-                        Static = $isStatic
-                        Key = "$repoPath|$($mutant.location.start.line)|$($mutant.mutatorName)|$($mutant.replacement)"
-                    }
-                }
+            $runs += , (Read-Survivors $report.FullName)
+        }
+        $survivors += Select-CommonSurvivors $runs
+    }
+    return , $survivors
+}
+
+function Read-Survivors([string]$reportPath) {
+    $found = @()
+    $json = Get-Content $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($fileProperty in $json.files.PSObject.Properties) {
+        $repoPath = ConvertTo-RepoPath $Repo $fileProperty.Name
+        foreach ($mutant in $fileProperty.Value.mutants) {
+            if ($mutant.status -ne 'Survived' -and $mutant.status -ne 'NoCoverage') { continue }
+            $isStatic = $false
+            if ($mutant.PSObject.Properties['static']) { $isStatic = [bool]$mutant.static }
+            $found += [pscustomobject]@{
+                File = $repoPath; Line = [int]$mutant.location.start.line
+                Mutator = $mutant.mutatorName; Status = $mutant.status; Replacement = $mutant.replacement
+                Static = $isStatic
+                Key = "$repoPath|$($mutant.location.start.line)|$($mutant.mutatorName)|$($mutant.replacement)"
             }
         }
     }
-    return , $survivors
+    return , $found
+}
+
+function Select-CommonSurvivors($runs) {
+    if ($runs.Count -eq 0) { return , @() }
+    $common = $runs[0]
+    for ($i = 1; $i -lt $runs.Count; $i++) {
+        $keys = @($runs[$i] | ForEach-Object { $_.Key })
+        $common = @($common | Where-Object { $keys -contains $_.Key })
+    }
+    return , $common
 }
 
 # Counts non-static survivors only. Static mutants are unstable between runs (see the header).

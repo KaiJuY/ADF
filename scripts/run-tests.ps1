@@ -1,5 +1,6 @@
 # Gate 1: runs each test project for one framework, with coverage.
 # Output: <OutDir>/<framework>/... (trx and coverage.cobertura.xml files) and summary.json.
+# A test project that does not list this framework in the profile is skipped and marked Skipped in summary.json.
 param(
     [Parameter(Mandatory = $true)][string]$Repo,
     [Parameter(Mandatory = $true)][string]$Framework,
@@ -14,20 +15,30 @@ if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
 New-Item -ItemType Directory -Force $runDir | Out-Null
 
 $results = @()
-foreach ($project in $adfProfile.testProjects) {
+foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
+    $project = $testProject.Path
+    if (-not (Test-SupportsFramework $testProject $Framework)) {
+        $results += [pscustomobject]@{
+            Project = $project; Framework = $Framework; Skipped = $true
+            Expected = 0; Total = 0; Passed = 0; Failed = 0
+            Truncated = $false; ExitCode = $null; FailedTests = @()
+        }
+        continue
+    }
     $projectPath = Join-Path $Repo $project
     $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
     $projectDir = Join-Path $runDir $name
 
-    $expected = @(& dotnet test $projectPath -f $Framework --list-tests --nologo 2>$null | Where-Object { $_ -match '^    \S' }).Count
+    $listing = Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $Framework, '--list-tests', '--nologo')
+    $expected = @($listing | Where-Object { $_ -match '^    \S' }).Count
 
-    & dotnet test $projectPath -f $Framework --nologo `
-        --collect:"XPlat Code Coverage" `
-        --results-directory $projectDir `
-        --logger "trx;LogFileName=$name.trx" *> (Join-Path $runDir "$name.log")
+    Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $Framework, '--nologo',
+        '--collect:XPlat Code Coverage',
+        '--results-directory', $projectDir,
+        '--logger', "trx;LogFileName=$name.trx") | Out-File (Join-Path $runDir "$name.log") -Encoding utf8
     $exitCode = $LASTEXITCODE
 
-    $trx = Get-ChildItem $projectDir -Recurse -Filter '*.trx' | Select-Object -First 1
+    $trx = Get-ChildItem $projectDir -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue | Select-Object -First 1
     $total = 0; $passed = 0; $failed = 0; $failedNames = @()
     if ($trx) {
         [xml]$doc = Get-Content $trx.FullName -Raw -Encoding UTF8
@@ -40,17 +51,22 @@ foreach ($project in $adfProfile.testProjects) {
 
     $truncated = $total -lt $expected
     $results += [pscustomobject]@{
-        Project = $project; Framework = $Framework
+        Project = $project; Framework = $Framework; Skipped = $false
         Expected = $expected; Total = $total; Passed = $passed; Failed = $failed
         Truncated = $truncated; ExitCode = $exitCode; FailedTests = $failedNames
     }
 }
 
 Write-AdfJson $results (Join-Path $runDir 'summary.json')
-$results | Format-Table Project, Framework, Expected, Total, Passed, Failed, Truncated -AutoSize | Out-String -Width 250 | Out-Host
+$results | Format-Table Project, Framework, Skipped, Expected, Total, Passed, Failed, Truncated -AutoSize | Out-String -Width 250 | Out-Host
 Write-Host "Logs: $runDir\*.log"
 
-$bad = @($results | Where-Object { $_.Failed -gt 0 -or $_.Truncated -or $_.Total -eq 0 })
+$ran = @($results | Where-Object { -not $_.Skipped })
+if ($ran.Count -eq 0) {
+    Write-Host "GATE 1 FAILED: no test project in the profile supports $Framework."
+    exit 1
+}
+$bad = @($ran | Where-Object { $_.Failed -gt 0 -or $_.Truncated -or $_.Total -eq 0 })
 if ($bad.Count -gt 0) {
     Write-Host "GATE 1 FAILED: failed tests, a cut-off run (total below discovery count), or no tests ran."
     foreach ($r in $bad) { foreach ($t in $r.FailedTests) { Write-Host "  FAILED $($r.Project): $t" } }

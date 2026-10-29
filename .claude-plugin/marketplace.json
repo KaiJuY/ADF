@@ -3,6 +3,6 @@
   "owner": { "name": "Allen" },
   "description": "ADF (AllenDevelopFlow) marketplace.",
   "plugins": [
-    { "name": "adf", "source": "./", "description": "AllenDevelopFlow", "version": "0.2.0" }
+    { "name": "adf", "source": "./", "description": "AllenDevelopFlow", "version": "0.2.1" }
   ]
 }

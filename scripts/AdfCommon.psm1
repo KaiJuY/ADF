@@ -22,6 +22,31 @@ function Get-AdfProfile([string]$repo) {
     return Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
 }
 
+# Returns the test projects as objects with Path and Frameworks ($null means every framework).
+# A profile entry is a path string, or { "path": "...", "frameworks": ["..."] }.
+function Get-AdfTestProjects($adfProfile) {
+    foreach ($entry in $adfProfile.testProjects) {
+        if ($entry -is [string]) {
+            [pscustomobject]@{ Path = $entry; Frameworks = $null }
+            continue
+        }
+        $frameworks = $null
+        if ($entry.PSObject.Properties['frameworks']) { $frameworks = @($entry.frameworks) }
+        [pscustomobject]@{ Path = $entry.path; Frameworks = $frameworks }
+    }
+}
+
+function Test-SupportsFramework($testProject, [string]$framework) {
+    return ($null -eq $testProject.Frameworks) -or ($testProject.Frameworks -contains $framework)
+}
+
+# Runs a native program and returns its stdout and stderr lines as strings; the caller checks $LASTEXITCODE.
+# Windows PowerShell 5.1 turns a stderr line into a terminating error under $ErrorActionPreference = 'Stop'.
+function Invoke-AdfNative([string]$exe, [string[]]$arguments) {
+    $ErrorActionPreference = 'Continue'
+    & $exe @arguments 2>&1 | ForEach-Object { "$_" }
+}
+
 function ConvertTo-RepoPath([string]$repo, [string]$path) {
     $full = [System.IO.Path]::GetFullPath($path)
     $root = [System.IO.Path]::GetFullPath($repo).TrimEnd('\') + '\'
@@ -163,4 +188,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Test-SupportsFramework, Invoke-AdfNative, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
