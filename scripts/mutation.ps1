@@ -21,6 +21,18 @@ $stryker = Get-AdfToolPath 'dotnet-stryker.exe'
 $runDir = Join-Path $OutDir "mutation-$Framework"
 if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
 
+# Returns an MSBuild.exe that can build SDK-style projects, or $null to let Stryker pick one.
+# Stryker picks the newest Visual Studio, which can be a Build Tools install without the .NET SDK component.
+function Get-MsBuildPath {
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+    if (-not (Test-Path $vswhere)) { return $null }
+    $found = Invoke-AdfNative $vswhere @('-latest', '-products', '*', '-requires', 'Microsoft.NetCore.Component.SDK', '-find', 'MSBuild\**\Bin\MSBuild.exe')
+    return @($found | Where-Object { $_ -and (Test-Path $_) })[0]
+}
+
+# Used only for .NET Framework targets: Stryker builds those with MSBuild.exe instead of dotnet build.
+$msBuild = Get-MsBuildPath
+
 # A source project referenced by several test projects is mutated once per test project.
 # A mutant counts only if it survived every one of those runs: one test project that kills it is enough.
 function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
@@ -45,7 +57,10 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
             $projectOut = Join-Path $passDir ([System.IO.Path]::GetFileNameWithoutExtension($testProject.Path) + '__' + [System.IO.Path]::GetFileNameWithoutExtension($sourceName))
             $arguments = @('-tp', $testPath, '-p', $sourceName, '--target-framework', $projectFramework,
                 '-r', 'Json', '-r', 'Html', '-O', $projectOut, '--skip-version-check')
-            if ($projectFramework -match '^net\d{2,3}$') { $arguments += @('-s', (Join-Path $Repo $adfProfile.solution)) }
+            if ($projectFramework -match '^net\d{2,3}$') {
+                $arguments += @('-s', (Join-Path $Repo $adfProfile.solution))
+                if ($msBuild) { $arguments += @('--msbuild-path', $msBuild) }
+            }
             if ($Base) { $arguments += "--since:$Base" }
             foreach ($target in $targets) {
                 $full = Join-Path $Repo $target
