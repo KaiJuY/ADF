@@ -1,6 +1,7 @@
 # Gate 1: runs each test project for one framework, with coverage.
 # Output: <OutDir>/<framework>/... (trx and coverage.cobertura.xml files) and summary.json.
-# A test project that does not list this framework in the profile is skipped and marked Skipped in summary.json.
+# A test project that does not list this framework is skipped (Skipped in summary.json). In the main framework run,
+# it runs with its own first framework instead; summary.json records the framework that ran.
 param(
     [Parameter(Mandatory = $true)][string]$Repo,
     [Parameter(Mandatory = $true)][string]$Framework,
@@ -17,7 +18,8 @@ New-Item -ItemType Directory -Force $runDir | Out-Null
 $results = @()
 foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
     $project = $testProject.Path
-    if (-not (Test-SupportsFramework $testProject $Framework)) {
+    $projectFramework = Get-RunFramework $testProject $Framework $adfProfile.mainFramework
+    if (-not $projectFramework) {
         $results += [pscustomobject]@{
             Project = $project; Framework = $Framework; Skipped = $true
             Expected = 0; Total = 0; Passed = 0; Failed = 0
@@ -29,10 +31,10 @@ foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
     $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
     $projectDir = Join-Path $runDir $name
 
-    $listing = Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $Framework, '--list-tests', '--nologo')
+    $listing = Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $projectFramework, '--list-tests', '--nologo')
     $expected = @($listing | Where-Object { $_ -match '^    \S' }).Count
 
-    Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $Framework, '--nologo',
+    Invoke-AdfNative 'dotnet' @('test', $projectPath, '-f', $projectFramework, '--nologo',
         '--collect:XPlat Code Coverage',
         '--results-directory', $projectDir,
         '--logger', "trx;LogFileName=$name.trx") | Out-File (Join-Path $runDir "$name.log") -Encoding utf8
@@ -51,7 +53,7 @@ foreach ($testProject in @(Get-AdfTestProjects $adfProfile)) {
 
     $truncated = $total -lt $expected
     $results += [pscustomobject]@{
-        Project = $project; Framework = $Framework; Skipped = $false
+        Project = $project; Framework = $projectFramework; Skipped = $false
         Expected = $expected; Total = $total; Passed = $passed; Failed = $failed
         Truncated = $truncated; ExitCode = $exitCode; FailedTests = $failedNames
     }
