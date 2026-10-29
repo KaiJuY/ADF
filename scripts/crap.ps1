@@ -14,7 +14,7 @@ $limitCrap = [double]$adfProfile.limits.crap
 $limitComplexity = [int]$adfProfile.limits.complexity
 $limitCoverage = [double]$adfProfile.limits.changedLineCoverage
 
-$files = @(Get-ChildItem $CoverageDir -Recurse -Filter 'coverage.cobertura.xml' | ForEach-Object { $_.FullName })
+$files = @(Find-AdfFiles $CoverageDir 'coverage.cobertura.xml' | ForEach-Object { $_.FullName })
 if ($files.Count -eq 0) { throw "No coverage.cobertura.xml under $CoverageDir. Does the test project reference coverlet.collector?" }
 
 $methods = Read-CoberturaMethods $Repo $files $adfProfile.exclude

@@ -61,7 +61,7 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
             if ($LASTEXITCODE -ne 0) { throw "Stryker failed for $($testProject.Path) -> $sourceName (exit $LASTEXITCODE). Log: $log" }
             Get-Content $log | Where-Object { $_ -match 'final mutation score|unable to calculate' } | ForEach-Object { Write-Host "  $sourceName $_" }
 
-            $report = Get-ChildItem $projectOut -Recurse -Filter 'mutation-report.json' | Select-Object -First 1
+            $report = Find-AdfFiles $projectOut 'mutation-report.json' | Select-Object -First 1
             if (-not $report) { continue }
             $runs += , (Read-Survivors $report.FullName)
         }
