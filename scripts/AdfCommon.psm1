@@ -56,6 +56,15 @@ function Invoke-AdfNative([string]$exe, [string[]]$arguments) {
     & $exe @arguments 2>&1 | ForEach-Object { "$_" }
 }
 
+# Finds files under $dir and skips each folder it cannot read, with a warning.
+# Windows PowerShell 5.1 cannot read a path over 260 characters, and vstest leaves deep folders in the output.
+function Find-AdfFiles([string]$dir, [string]$filter) {
+    if (-not (Test-Path $dir)) { return }
+    $unreadable = $null
+    Get-ChildItem $dir -Recurse -File -Filter $filter -ErrorAction SilentlyContinue -ErrorVariable unreadable
+    foreach ($e in $unreadable) { Write-Warning "Skipped a folder that cannot be read: $($e.TargetObject)" }
+}
+
 function ConvertTo-RepoPath([string]$repo, [string]$path) {
     $full = [System.IO.Path]::GetFullPath($path)
     $root = [System.IO.Path]::GetFullPath($repo).TrimEnd('\') + '\'
@@ -197,4 +206,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
