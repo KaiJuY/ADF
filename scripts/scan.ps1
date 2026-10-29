@@ -14,9 +14,9 @@ $adfProfile = Get-AdfProfile $Repo
 $outDir = Join-Path $Repo ".adf\out\scan-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $baselineDir = Join-Path $Repo '.adf\baseline'
 
-$inventory = @($adfProfile.testProjects | ForEach-Object {
-    $text = Get-Content (Join-Path $Repo $_) -Raw
-    [pscustomobject]@{ Project = $_; HasCoverlet = ($text -match 'coverlet\.collector') }
+$inventory = @(Get-AdfTestProjects $adfProfile | ForEach-Object {
+    $text = Get-Content (Join-Path $Repo $_.Path) -Raw
+    [pscustomobject]@{ Project = $_.Path; HasCoverlet = ($text -match 'coverlet\.collector') }
 })
 Write-AdfJson $inventory (Join-Path $baselineDir 'inventory.json')
 $missing = @($inventory | Where-Object { -not $_.HasCoverlet })
@@ -34,7 +34,8 @@ if ($LASTEXITCODE -ne 0) { Write-Host 'Scan continues with the coverage that was
 
 $reportGenerator = Get-AdfToolPath 'reportgenerator.exe'
 $limit = $adfProfile.limits.crap
-& $reportGenerator "-reports:$outDir\$framework\**\coverage.cobertura.xml" "-targetdir:$outDir\report" '-reporttypes:Html;TextSummary' "-riskHotspotsAnalysisThresholds:metricThresholdForCrapScore=$limit" "-riskHotspotsAnalysisThresholds:metricThresholdForCyclomaticComplexity=$limit" | Out-Null
+Invoke-AdfNative $reportGenerator @("-reports:$outDir\$framework\**\coverage.cobertura.xml", "-targetdir:$outDir\report", '-reporttypes:Html;TextSummary',
+    "-riskHotspotsAnalysisThresholds:metricThresholdForCrapScore=$limit", "-riskHotspotsAnalysisThresholds:metricThresholdForCyclomaticComplexity=$limit") | Out-Null
 Write-Host "Coverage report: $outDir\report\index.html"
 
 if ($Mutation) {

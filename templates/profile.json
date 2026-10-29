@@ -4,7 +4,8 @@
   "mainFramework": "net8.0",
   "releaseFrameworks": ["net8.0"],
   "testProjects": [
-    "tests/<Name>.Tests/<Name>.Tests.csproj"
+    "tests/<Name>.Tests/<Name>.Tests.csproj",
+    { "path": "tests/<Name>.Wpf.Tests/<Name>.Wpf.Tests.csproj", "frameworks": ["net8.0-windows"] }
   ],
   "sourceProjects": [
     "src/<Name>/<Name>.csproj"
