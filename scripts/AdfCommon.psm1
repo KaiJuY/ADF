@@ -82,6 +82,13 @@ function Test-Excluded([string]$repoPath, $patterns) {
     return $false
 }
 
+# Returns the full commit SHA for a short SHA, branch, or tag. Stryker --since does not accept a short SHA.
+function Resolve-AdfBase([string]$repo, [string]$base) {
+    $sha = & git -C $repo rev-parse --verify --quiet "$base^{commit}"
+    if ($LASTEXITCODE -ne 0 -or -not $sha) { throw "Base '$base' is not a commit in $repo. Give a commit SHA, a branch, or a tag." }
+    return "$sha".Trim()
+}
+
 # Returns @{ '<repo path>' = HashSet[int] of changed line numbers in the working tree, relative to $base }.
 function Get-ChangedLines([string]$repo, [string]$base) {
     $result = @{}
@@ -206,4 +213,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson

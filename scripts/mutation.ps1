@@ -17,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AdfCommon.psm1') -Force
 
 $adfProfile = Get-AdfProfile $Repo
+if ($Base) { $Base = Resolve-AdfBase $Repo $Base }
 $stryker = Get-AdfToolPath 'dotnet-stryker.exe'
 $runDir = Join-Path $OutDir "mutation-$Framework"
 if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }

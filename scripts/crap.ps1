@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AdfCommon.psm1') -Force
 
 $adfProfile = Get-AdfProfile $Repo
+if ($Base) { $Base = Resolve-AdfBase $Repo $Base }
 $limitCrap = [double]$adfProfile.limits.crap
 $limitComplexity = [int]$adfProfile.limits.complexity
 $limitCoverage = [double]$adfProfile.limits.changedLineCoverage
