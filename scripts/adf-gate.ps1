@@ -12,6 +12,7 @@ Import-Module (Join-Path $PSScriptRoot 'AdfCommon.psm1') -Force
 $Repo = (Resolve-Path $Repo).Path
 $adfProfile = Get-AdfProfile $Repo
 if (-not $Base) { $Base = $adfProfile.baseBranch }
+$Base = Resolve-AdfBase $Repo $Base
 if (-not $OutDir) { $OutDir = Join-Path $Repo ".adf\out\gate-$(Get-Date -Format 'yyyyMMdd-HHmmss')" }
 
 $frameworks = @($adfProfile.mainFramework)
