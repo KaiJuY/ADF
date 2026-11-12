@@ -75,7 +75,7 @@ The comment reviewer accepts this comment under comment type 5.
 | Development | Stage H of a normal change | `--since:<base>` on the main target framework. Mutates changed files only. |
 | Release | `/adf:gate --release` | Full run on each target framework. The script compares the survivors per file with `.adf/baseline/mutation.json`. |
 
-The owner reads the gate 3 result from `gate3.json` in the run directory (`<OutDir>\mutation-<framework>\gate3.json`), not from `survivors.json`. `survivors.json` lists the survivors of whole files. `gate3.json` holds `Mode`, `Framework`, `Passed`, `OnChangedLines` (the survivors on changed lines that fail the gate), `Counted` and `Static`; in release mode it also holds `IncreasedFiles` (File, Baseline, Now). It is written for both pass and fail, but not for `-WriteBaseline`.
+The owner reads the gate 3 result from `gate3.json` in the run directory (`<OutDir>\mutation-<framework>\gate3.json`), not from `survivors.json`. `survivors.json` lists the survivors of whole files. `gate3.json` holds `Mode`, `Framework`, `Passed`, `OnChangedLines` (the survivors on changed lines that fail the gate), `Counted` and `Static`; in release mode it also holds `IncreasedFiles` (File, Baseline, Now). When the Stryker comment check fails, Stryker does not run and `MalformedComments` (File, Line, Text) lists the bad comments. It is written for both pass and fail, but not for `-WriteBaseline`.
 
 Stryker's `since` and `with-baseline` options cannot be used together. ADF keeps its own baseline file, so it does not use `with-baseline`.
 
