@@ -74,6 +74,12 @@ Stryker's `since` and `with-baseline` options cannot be used together. ADF keeps
 
 Measured on Polar300x_WPF (2026-10-28): three runs on the same code gave different static survivors in `Machine.cs` lines 21 to 24.
 
+**Memory limit.** A mutant can make a loop endless, for example `<` to `<=` on a loop that adds items. The testhost then allocates until the machine has no free RAM. `mutation.ps1` sets `DOTNET_GCHeapHardLimit` for each Stryker run. Such a testhost gets `OutOfMemoryException`, the test fails, and the mutant is killed.
+
+1. The default limit is 4 GB for each process. Change it with `limits.mutationHeapGB` in the profile, or with `-HeapLimitGB` on `mutation.ps1`. The value 0 removes the limit.
+2. The limit also applies to the Stryker process. If Stryker fails with `OutOfMemoryException`, increase the limit.
+3. A .NET Framework testhost (for example `net462`) ignores this variable.
+
 **Reference values.** Stryker's default thresholds are high 80, low 60, break 0. Google (2018) does not use a score. It shows surviving mutants on changed lines during code review and skips lines with no test value, such as logging. ADF follows the Google idea: zero survivors on changed code, with reasons for equivalent mutants.
 
 ## Release

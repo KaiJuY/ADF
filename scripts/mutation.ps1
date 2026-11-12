@@ -6,18 +6,30 @@
 # Mutants in static initializers can change between Killed and Survived from run to run, because the
 # initializer runs once per test process. Stryker marks them "static": the release count leaves them
 # out. A failure is also confirmed by a second run on the failing files; only findings in both runs count.
+#
+# A mutant can turn a loop into an endless loop that allocates memory. Each Stryker run sets
+# DOTNET_GCHeapHardLimit, so such a testhost gets OutOfMemoryException (the mutant is killed) before it
+# uses all system RAM. The limit applies to each .NET (Core) process, Stryker included; .NET Framework
+# testhosts ignore it. -HeapLimitGB overrides limits.mutationHeapGB in the profile (default 4, 0 = no limit).
 param(
     [Parameter(Mandatory = $true)][string]$Repo,
     [Parameter(Mandatory = $true)][string]$Framework,
     [Parameter(Mandatory = $true)][string]$OutDir,
     [string]$Base,
-    [switch]$WriteBaseline
+    [switch]$WriteBaseline,
+    [double]$HeapLimitGB = -1
 )
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AdfCommon.psm1') -Force
 
 $adfProfile = Get-AdfProfile $Repo
 if ($Base) { $Base = Resolve-AdfBase $Repo $Base }
+if ($HeapLimitGB -lt 0) {
+    $HeapLimitGB = 4
+    if ($adfProfile.limits.PSObject.Properties['mutationHeapGB']) { $HeapLimitGB = [double]$adfProfile.limits.mutationHeapGB }
+}
+$heapLimit = $null
+if ($HeapLimitGB -gt 0) { $heapLimit = '0x{0:X}' -f [long]($HeapLimitGB * 1GB) }
 $stryker = Get-AdfToolPath 'dotnet-stryker.exe'
 $runDir = Join-Path $OutDir "mutation-$Framework"
 if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
@@ -73,8 +85,13 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
             New-Item -ItemType Directory -Force $projectOut | Out-Null
             $log = Join-Path $projectOut 'stryker.log'
             Push-Location (Split-Path $testPath -Parent)
+            $previousLimit = $env:DOTNET_GCHeapHardLimit
+            if ($heapLimit) { $env:DOTNET_GCHeapHardLimit = $heapLimit }
             try { Invoke-AdfNative $stryker $arguments | Out-File $log -Encoding utf8 }
-            finally { Pop-Location }
+            finally {
+                $env:DOTNET_GCHeapHardLimit = $previousLimit
+                Pop-Location
+            }
             if ($LASTEXITCODE -ne 0) { throw "Stryker failed for $($testProject.Path) -> $sourceName (exit $LASTEXITCODE). Log: $log" }
             Get-Content $log | Where-Object { $_ -match 'final mutation score|unable to calculate' } | ForEach-Object { Write-Host "  $sourceName $_" }
 

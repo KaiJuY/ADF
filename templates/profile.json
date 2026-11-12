@@ -20,6 +20,7 @@
   "limits": {
     "crap": 12,
     "complexity": 12,
-    "changedLineCoverage": 0.9
+    "changedLineCoverage": 0.9,
+    "mutationHeapGB": 4
   }
 }
