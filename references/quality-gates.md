@@ -56,6 +56,16 @@ After the fix, run gate 3. The number of surviving mutants must not go up.
 // Stryker disable once Equality: the loop bound is equal for < and <= because the last item is a sentinel
 ```
 
+The format is strict, because Stryker ignores a malformed comment without a warning and the mutant stays alive. Write `// Stryker disable|restore [once] all|<Mutator>,<Mutator>[: <reason>]`: no space after a comma, no space before the colon, one space after the colon. `disable once` covers only the next statement node. To exclude the embedded statement of an `if`, put `disable` and `restore` comments around it:
+
+```csharp
+// Stryker disable Statement,String: the log text has no test value
+if (verbose) Log("loaded");
+// Stryker restore Statement,String
+```
+
+Gate 3 checks this format before it runs Stryker. It fails and prints the file and line of each comment that does not match. It also fails when code comes before the comment on the same line.
+
 The comment reviewer accepts this comment under comment type 5.
 
 **Modes.**
@@ -64,6 +74,8 @@ The comment reviewer accepts this comment under comment type 5.
 |---|---|---|
 | Development | Stage H of a normal change | `--since:<base>` on the main target framework. Mutates changed files only. |
 | Release | `/adf:gate --release` | Full run on each target framework. The script compares the survivors per file with `.adf/baseline/mutation.json`. |
+
+The owner reads the gate 3 result from `gate3.json` in the run directory (`<OutDir>\mutation-<framework>\gate3.json`), not from `survivors.json`. `survivors.json` lists the survivors of whole files. `gate3.json` holds `Mode`, `Framework`, `Passed`, `OnChangedLines` (the survivors on changed lines that fail the gate), `Counted` and `Static`; in release mode it also holds `IncreasedFiles` (File, Baseline, Now). When the Stryker comment check fails, Stryker does not run and `MalformedComments` (File, Line, Text) lists the bad comments. It is written for both pass and fail, but not for `-WriteBaseline`.
 
 Stryker's `since` and `with-baseline` options cannot be used together. ADF keeps its own baseline file, so it does not use `with-baseline`.
 

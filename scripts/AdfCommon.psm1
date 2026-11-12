@@ -89,6 +89,20 @@ function Resolve-AdfBase([string]$repo, [string]$base) {
     return "$sha".Trim()
 }
 
+# Stryker reads only comments in this exact form and ignores the rest without a warning.
+# A line that holds the marker but does not match (a space after a comma, a space before the colon,
+# or code before the comment) is returned as an error. $lineSet limits the check to those line numbers.
+function Get-StrykerCommentErrors([string]$repo, [string]$repoPath, $lineSet) {
+    $valid = '^// Stryker (disable|restore)( once)? (all|[A-Za-z]+(,[A-Za-z]+)*)(: .+)?$'
+    $lines = @(Get-Content (Join-Path $repo $repoPath) -Encoding UTF8)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -notmatch '// Stryker (disable|restore)') { continue }
+        if ($lineSet -and -not $lineSet.Contains($i + 1)) { continue }
+        if ($lines[$i].Trim() -match $valid) { continue }
+        [pscustomobject]@{ File = $repoPath; Line = $i + 1; Text = $lines[$i].Trim() }
+    }
+}
+
 # Returns @{ '<repo path>' = HashSet[int] of changed line numbers in the working tree, relative to $base }.
 function Get-ChangedLines([string]$repo, [string]$base) {
     $result = @{}
@@ -198,6 +212,16 @@ function Read-CoberturaMethods([string]$repo, [string[]]$files, $exclude) {
     return $methods
 }
 
+# Returns "File|Type" keys of types that have a changed method whose baseline complexity is over $limit.
+# $now.Methods holds only methods with changed lines (crap.ps1 -Base) and uses working-tree line numbers,
+# so matching by File|Type|Method avoids comparing them with the baseline's base-commit line numbers.
+function Get-HeavyChangedTypes($baseline, $now, [int]$limit) {
+    $heavy = @{}
+    foreach ($m in @($baseline.Methods | Where-Object { $_.Complexity -gt $limit })) { $heavy["$($m.File)|$($m.Type)|$($m.Method)"] = $true }
+    $keys = @($now.Methods | Where-Object { $heavy.ContainsKey("$($_.File)|$($_.Type)|$($_.Method)") } | ForEach-Object { "$($_.File)|$($_.Type)" })
+    return @($keys | Sort-Object -Unique)
+}
+
 function Test-MethodChanged($record, $changedLines) {
     if (-not $changedLines.ContainsKey($record.File)) { return $false }
     foreach ($line in $record.Lines.Keys) {
@@ -213,4 +237,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Get-StrykerCommentErrors, Read-CoberturaMethods, Test-MethodChanged, Get-HeavyChangedTypes, Write-AdfJson
