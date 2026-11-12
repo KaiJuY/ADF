@@ -56,6 +56,16 @@ After the fix, run gate 3. The number of surviving mutants must not go up.
 // Stryker disable once Equality: the loop bound is equal for < and <= because the last item is a sentinel
 ```
 
+The format is strict, because Stryker ignores a malformed comment without a warning and the mutant stays alive. Write `// Stryker disable|restore [once] all|<Mutator>,<Mutator>[: <reason>]`: no space after a comma, no space before the colon, one space after the colon. `disable once` covers only the next statement node. To exclude the embedded statement of an `if`, put `disable` and `restore` comments around it:
+
+```csharp
+// Stryker disable Statement,String: the log text has no test value
+if (verbose) Log("loaded");
+// Stryker restore Statement,String
+```
+
+Gate 3 checks this format before it runs Stryker. It fails and prints the file and line of each comment that does not match. It also fails when code comes before the comment on the same line.
+
 The comment reviewer accepts this comment under comment type 5.
 
 **Modes.**

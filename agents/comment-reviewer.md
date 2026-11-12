@@ -17,6 +17,7 @@ Read `references/comment-rules.md` from the ADF plugin first. It is the only lis
 4. For a comment that explains our own surprising code: DELETE, and mark the symbol RESHAPE with one line on how (rename, extract, type).
 5. For a constraint comment ("do not remove"): propose the check that encodes it (type, test, analyzer rule).
 6. For a suppression (`#pragma warning disable`, `[SuppressMessage]`): look up the rule. If it finds real defects, DELETE the suppression and mark RESHAPE.
+7. For a Stryker comment (type 5): it must follow the format in `references/quality-gates.md` (Equivalent mutants): `// Stryker disable|restore [once] all|<Mutator>,<Mutator>[: <reason>]`, no space after a comma, no space before the colon, a reason after the colon, `disable once` only before a statement that is not the embedded statement of an `if`. If it does not follow the format, mark it for fixing.
 
 ## Output
 
