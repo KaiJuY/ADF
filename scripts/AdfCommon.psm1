@@ -89,6 +89,20 @@ function Resolve-AdfBase([string]$repo, [string]$base) {
     return "$sha".Trim()
 }
 
+# Stryker reads only comments in this exact form and ignores the rest without a warning.
+# A line that holds the marker but does not match (a space after a comma, a space before the colon,
+# or code before the comment) is returned as an error. $lineSet limits the check to those line numbers.
+function Get-StrykerCommentErrors([string]$repo, [string]$repoPath, $lineSet) {
+    $valid = '^// Stryker (disable|restore)( once)? (all|[A-Za-z]+(,[A-Za-z]+)*)(: .+)?$'
+    $lines = @(Get-Content (Join-Path $repo $repoPath) -Encoding UTF8)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -notmatch '// Stryker (disable|restore)') { continue }
+        if ($lineSet -and -not $lineSet.Contains($i + 1)) { continue }
+        if ($lines[$i].Trim() -match $valid) { continue }
+        [pscustomobject]@{ File = $repoPath; Line = $i + 1; Text = $lines[$i].Trim() }
+    }
+}
+
 # Returns @{ '<repo path>' = HashSet[int] of changed line numbers in the working tree, relative to $base }.
 function Get-ChangedLines([string]$repo, [string]$base) {
     $result = @{}
@@ -213,4 +227,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Get-StrykerCommentErrors, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson

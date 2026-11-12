@@ -43,6 +43,35 @@ function Get-MsBuildPath {
     return @($found | Where-Object { $_ -and (Test-Path $_) })[0]
 }
 
+# Stryker ignores a malformed disable/restore comment without a warning, so check the comments before any run.
+# Development mode checks only the changed lines: a bad comment on an old line is not part of this change.
+# Release mode checks every line of the source projects.
+function Get-StrykerLintFiles {
+    $dirs = @($adfProfile.sourceProjects | ForEach-Object { (Split-Path $_ -Parent).Replace('\', '/').ToLowerInvariant() + '/' })
+    $candidates = @{}
+    if ($Base) { $candidates = Get-ChangedLines $Repo $Base }
+    else {
+        foreach ($dir in $dirs) {
+            foreach ($file in @(Find-AdfFiles (Join-Path $Repo $dir) '*.cs')) { $candidates[(ConvertTo-RepoPath $Repo $file.FullName)] = $null }
+        }
+    }
+    $result = @{}
+    foreach ($path in $candidates.Keys) {
+        $inSource = @($dirs | Where-Object { $path.StartsWith($_) }).Count -gt 0
+        if ($inSource -and -not (Test-Excluded $path $adfProfile.exclude)) { $result[$path] = $candidates[$path] }
+    }
+    return $result
+}
+
+$lintErrors = @()
+$lintFiles = Get-StrykerLintFiles
+foreach ($path in $lintFiles.Keys) { $lintErrors += @(Get-StrykerCommentErrors $Repo $path $lintFiles[$path]) }
+if ($lintErrors.Count -gt 0) {
+    foreach ($e in $lintErrors) { Write-Host "$($e.File):$($e.Line): $($e.Text)" }
+    Write-Host "GATE 3 FAILED: $($lintErrors.Count) malformed Stryker comment(s). Stryker ignores them. Format: // Stryker disable|restore [once] all|Mutator,Mutator[: reason] (no space after a comma or before the colon). See references/quality-gates.md."
+    exit 1
+}
+
 # Used only for .NET Framework targets: Stryker builds those with MSBuild.exe instead of dotnet build.
 $msBuild = Get-MsBuildPath
 
