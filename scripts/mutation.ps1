@@ -156,6 +156,19 @@ function Get-Increased($perFile, $baseline) {
     return , $increased
 }
 
+# gate3.json is the gate 3 result. It sits in $runDir so that several frameworks in one $OutDir do not
+# overwrite each other. survivors.json lists whole-file survivors; only gate3.json has the changed-line result.
+# Counted and Static are whole-run counts, the same numbers as the console line.
+function Write-Gate3([string]$mode, [bool]$passed, $onChangedLines, $increasedFiles) {
+    $result = [ordered]@{
+        Mode = $mode; Framework = $Framework; Passed = $passed
+        OnChangedLines = @($onChangedLines | ForEach-Object { [pscustomobject]@{ File = $_.File; Line = $_.Line; Mutator = $_.Mutator; Status = $_.Status; Replacement = $_.Replacement } })
+        Counted = $survivors.Count - $staticCount; Static = $staticCount
+    }
+    if ($mode -eq 'release') { $result['IncreasedFiles'] = @($increasedFiles) }
+    Write-AdfJson ([pscustomobject]$result) (Join-Path $runDir 'gate3.json')
+}
+
 $survivors = Invoke-Mutation (Join-Path $runDir 'pass1') $null
 $perFile = Get-PerFile $survivors
 $staticCount = @($survivors | Where-Object { $_.Static }).Count
@@ -164,6 +177,7 @@ Write-Host "Survivors: $($survivors.Count - $staticCount) counted, $staticCount 
 
 $baselinePath = Join-Path $Repo '.adf\baseline\mutation.json'
 if ($WriteBaseline) {
+    # No gate3.json: writing a baseline is not a gate 3 check, so there is no pass or fail to record.
     Write-AdfJson ([pscustomobject]@{ Framework = $Framework; Date = (Get-Date -Format 's'); PerFile = $perFile }) $baselinePath
     Write-Host "Baseline written: $baselinePath ($($survivors.Count - $staticCount) counted survivors in $($perFile.Count) files)"
     exit 0
@@ -180,6 +194,7 @@ if ($Base) {
         $onChanged = @($onChanged | Where-Object { $secondKeys -contains $_.Key })
     }
     $onChanged | Format-Table File, Line, Mutator, Status, Replacement -AutoSize | Out-String -Width 250 | Out-Host
+    Write-Gate3 'development' ($onChanged.Count -eq 0) $onChanged $null
     if ($onChanged.Count -gt 0) {
         Write-Host "GATE 3 FAILED: $($onChanged.Count) surviving mutant(s) on changed lines. Kill them, or mark an equivalent mutant with a Stryker disable comment and a reason."
         exit 1
@@ -199,6 +214,7 @@ if ($increased.Count -gt 0) {
     $increased = @($increased | Where-Object { $confirmed -contains $_.File })
 }
 $increased | Format-Table -AutoSize | Out-String -Width 250 | Out-Host
+Write-Gate3 'release' ($increased.Count -eq 0) @() $increased
 if ($increased.Count -gt 0) {
     Write-Host "GATE 3 FAILED: surviving mutants went up in $($increased.Count) file(s), in both runs."
     exit 1
