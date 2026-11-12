@@ -64,8 +64,23 @@ foreach ($framework in $frameworks) {
 Write-Host ''
 Write-Host "Output: $OutDir"
 $summary | Format-Table -AutoSize | Out-Host
+# Gate 3 detail comes from gate3.json. A missing or unreadable file counts as failed.
+$gate3Failed = $false
+foreach ($row in @($summary | Where-Object { $_.Gate -eq '3 mutation' })) {
+    $gate3Path = Join-Path (Join-Path $OutDir "mutation-$($row.Framework)") 'gate3.json'
+    $gate3Json = $null
+    if (Test-Path $gate3Path) { try { $gate3Json = Get-Content $gate3Path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $gate3Json = $null } }
+    if (-not $gate3Json) {
+        Write-Host "Gate 3 ($($row.Framework)): gate3.json missing or unreadable: $gate3Path"
+        $gate3Failed = $true
+        continue
+    }
+    $onChangedCount = @($gate3Json.OnChangedLines).Count
+    Write-Host "Gate 3 ($($row.Framework), $($gate3Json.Mode)): Passed=$($gate3Json.Passed), $onChangedCount on changed lines, $($gate3Json.Counted) counted, $($gate3Json.Static) static"
+    if (-not $gate3Json.Passed) { $gate3Failed = $true }
+}
 $expectedRows = 3 * $frameworks.Count
-if (@($summary | Where-Object { -not $_.Passed }).Count -gt 0 -or $summary.Count -lt $expectedRows) {
+if ($gate3Failed -or @($summary | Where-Object { -not $_.Passed }).Count -gt 0 -or $summary.Count -lt $expectedRows) {
     Write-Host 'ADF GATE FAILED'
     exit 1
 }
