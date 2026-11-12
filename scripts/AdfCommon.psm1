@@ -198,6 +198,16 @@ function Read-CoberturaMethods([string]$repo, [string[]]$files, $exclude) {
     return $methods
 }
 
+# Returns "File|Type" keys of types that have a changed method whose baseline complexity is over $limit.
+# $now.Methods holds only methods with changed lines (crap.ps1 -Base) and uses working-tree line numbers,
+# so matching by File|Type|Method avoids comparing them with the baseline's base-commit line numbers.
+function Get-HeavyChangedTypes($baseline, $now, [int]$limit) {
+    $heavy = @{}
+    foreach ($m in @($baseline.Methods | Where-Object { $_.Complexity -gt $limit })) { $heavy["$($m.File)|$($m.Type)|$($m.Method)"] = $true }
+    $keys = @($now.Methods | Where-Object { $heavy.ContainsKey("$($_.File)|$($_.Type)|$($_.Method)") } | ForEach-Object { "$($_.File)|$($_.Type)" })
+    return @($keys | Sort-Object -Unique)
+}
+
 function Test-MethodChanged($record, $changedLines) {
     if (-not $changedLines.ContainsKey($record.File)) { return $false }
     foreach ($line in $record.Lines.Keys) {
@@ -213,4 +223,4 @@ function Write-AdfJson($object, [string]$path) {
     [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
 }
 
-Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Write-AdfJson
+Export-ModuleMember -Function Get-AdfToolDirectory, Get-AdfToolPath, Get-AdfProfile, Get-AdfTestProjects, Get-RunFramework, Invoke-AdfNative, Find-AdfFiles, ConvertTo-RepoPath, Test-Excluded, Resolve-AdfBase, Get-ChangedLines, Read-CoberturaMethods, Test-MethodChanged, Get-HeavyChangedTypes, Write-AdfJson

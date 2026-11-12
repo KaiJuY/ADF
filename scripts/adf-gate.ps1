@@ -33,9 +33,8 @@ foreach ($framework in $frameworks) {
     if ($gate2 -eq 0 -and (Test-Path $baselinePath)) {
         $baseline = Get-Content $baselinePath -Raw -Encoding UTF8 | ConvertFrom-Json
         $now = Get-Content (Join-Path $OutDir "crap-$framework.json") -Raw -Encoding UTF8 | ConvertFrom-Json
-        $changed = Get-ChangedLines $Repo $Base
         $limit = [int]$adfProfile.limits.complexity
-        $heavyTypes = @($baseline.Methods | Where-Object { $_.Complexity -gt $limit -and $changed.ContainsKey($_.File) } | ForEach-Object { "$($_.File)|$($_.Type)" } | Sort-Object -Unique)
+        $heavyTypes = Get-HeavyChangedTypes $baseline $now $limit
         foreach ($key in $heavyTypes) {
             $before = @($baseline.Types | Where-Object { "$($_.File)|$($_.Type)" -eq $key })[0].Complexity
             $afterRow = @($now.Types | Where-Object { "$($_.File)|$($_.Type)" -eq $key })
