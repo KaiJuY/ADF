@@ -17,6 +17,7 @@
     "**/*.g.i.cs",
     "**/*.Designer.cs"
   ],
+  "ignoreMethods": ["ConfigureAwait"],
   "limits": {
     "crap": 12,
     "complexity": 12,

@@ -86,6 +86,10 @@ Stryker's `since` and `with-baseline` options cannot be used together. ADF keeps
 
 Measured on Polar300x_WPF (2026-10-28): three runs on the same code gave different static survivors in `Machine.cs` lines 21 to 24.
 
+**Ignored methods.** `ignoreMethods` in the profile lists method calls that Stryker does not mutate, in both modes. The default is `["ConfigureAwait"]`: `.ConfigureAwait(false)` → `true` changes no behavior that a test can see. Stryker 4.16 reads this list only from a config file, so `mutation.ps1` writes a `stryker-config.json` for each run (merged with the test project's own file, if it has one) and passes it with `-f`. Stryker also skips a statement mutation of a whole statement that holds such a call, for example removing `await x.ConfigureAwait(false);`. Set `[]` to mutate everything.
+
+**Mutant identity.** A mutant is identified by file, start and end position (line and column), mutator, and replacement. Line alone is not enough: two string literals on one line give two mutants with the same line, mutator, and replacement.
+
 **Memory limit.** A mutant can make a loop endless, for example `<` to `<=` on a loop that adds items. The testhost then allocates until the machine has no free RAM. `mutation.ps1` sets `DOTNET_GCHeapHardLimit` for each Stryker run. Such a testhost gets `OutOfMemoryException`, the test fails, and the mutant is killed.
 
 1. The default limit is 4 GB for each process. Change it with `limits.mutationHeapGB` in the profile, or with `-HeapLimitGB` on `mutation.ps1`. The value 0 removes the limit.

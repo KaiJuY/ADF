@@ -34,6 +34,27 @@ $stryker = Get-AdfToolPath 'dotnet-stryker.exe'
 $runDir = Join-Path $OutDir "mutation-$Framework"
 if (Test-Path $runDir) { Remove-Item -Recurse -Force $runDir }
 
+# Mutants inside these method calls are not mutated, for example .ConfigureAwait(false) -> true, which no test can see.
+$ignoreMethods = @('ConfigureAwait')
+if ($adfProfile.PSObject.Properties['ignoreMethods']) { $ignoreMethods = @($adfProfile.ignoreMethods) }
+
+# Stryker 4.16 takes ignore-methods only from a config file. Writes one into $dir, merged with the test project's
+# own stryker-config.json if it has one, and returns its path; returns $null when there is nothing to add.
+function New-StrykerConfig([string]$testDir, [string]$dir) {
+    if ($ignoreMethods.Count -eq 0) { return $null }
+    $config = [pscustomobject]@{ 'stryker-config' = [pscustomobject]@{} }
+    $own = Join-Path $testDir 'stryker-config.json'
+    if (Test-Path $own) { $config = Get-Content $own -Raw -Encoding UTF8 | ConvertFrom-Json }
+    if (-not $config.PSObject.Properties['stryker-config']) { $config | Add-Member -NotePropertyName 'stryker-config' -NotePropertyValue ([pscustomobject]@{}) }
+    $section = $config.'stryker-config'
+    $merged = @($ignoreMethods)
+    if ($section.PSObject.Properties['ignore-methods']) { $merged = @($section.'ignore-methods') + $merged | Select-Object -Unique }
+    $section | Add-Member -NotePropertyName 'ignore-methods' -NotePropertyValue @($merged) -Force
+    $path = Join-Path $dir 'stryker-config.json'
+    Write-AdfJson $config $path
+    return $path
+}
+
 # Returns an MSBuild.exe that can build SDK-style projects, or $null to let Stryker pick one.
 # Stryker picks the newest Visual Studio, which can be a Build Tools install without the .NET SDK component.
 function Get-MsBuildPath {
@@ -118,6 +139,8 @@ function Invoke-Mutation([string]$passDir, [string[]]$onlyFiles) {
             foreach ($pattern in $adfProfile.exclude) { $arguments += @('-m', "!$pattern") }
 
             New-Item -ItemType Directory -Force $projectOut | Out-Null
+            $configFile = New-StrykerConfig (Split-Path $testPath -Parent) $projectOut
+            if ($configFile) { $arguments += @('-f', $configFile) }
             $log = Join-Path $projectOut 'stryker.log'
             Push-Location (Split-Path $testPath -Parent)
             $previousLimit = $env:DOTNET_GCHeapHardLimit
@@ -152,7 +175,8 @@ function Read-Survivors([string]$reportPath) {
                 File = $repoPath; Line = [int]$mutant.location.start.line
                 Mutator = $mutant.mutatorName; Status = $mutant.status; Replacement = $mutant.replacement
                 Static = $isStatic
-                Key = "$repoPath|$($mutant.location.start.line)|$($mutant.mutatorName)|$($mutant.replacement)"
+                # Two mutants on one line can share line, mutator, and replacement; the full span tells them apart.
+                Key = "$repoPath|$($mutant.location.start.line):$($mutant.location.start.column)-$($mutant.location.end.line):$($mutant.location.end.column)|$($mutant.mutatorName)|$($mutant.replacement)"
             }
         }
     }
