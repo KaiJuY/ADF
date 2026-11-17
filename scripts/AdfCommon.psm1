@@ -89,18 +89,23 @@ function Resolve-AdfBase([string]$repo, [string]$base) {
     return "$sha".Trim()
 }
 
-# Stryker reads only comments in this exact form and ignores the rest without a warning.
-# A line that holds the marker but does not match (a space after a comma, a space before the colon,
-# or code before the comment) is returned as an error. $lineSet limits the check to those line numbers.
+# Returns the Stryker disable/restore comments that do not do what they appear to do. Checked with Stryker 4.16:
+# - no mutator ("disable once: reason"): Stryker ignores the comment without a warning.
+# - code before the comment: Stryker applies it to the next statement, not to its own line.
+# Spaces around commas and before the colon are accepted by Stryker. $lineSet limits the check to those line numbers.
 function Get-StrykerCommentErrors([string]$repo, [string]$repoPath, $lineSet) {
+    $marker = '//\s*Stryker\s+(disable|restore)\b'
     # The lookahead rejects "disable once" with no mutator: without it, "once" matches as a mutator name.
-    $valid = '^// Stryker (disable|restore)( once)? (?!once(,|:|$))(all|[A-Za-z]+(,[A-Za-z]+)*)(: .+)?$'
+    $valid = '^//\s*Stryker\s+(disable|restore)(\s+once)?\s+(?!once\s*(,|:|$))(all|[A-Za-z]+(\s*,\s*[A-Za-z]+)*)\s*(:.*)?$'
     $lines = @(Get-Content (Join-Path $repo $repoPath) -Encoding UTF8)
     for ($i = 0; $i -lt $lines.Count; $i++) {
-        if ($lines[$i] -notmatch '// Stryker (disable|restore)') { continue }
+        if ($lines[$i] -notmatch $marker) { continue }
         if ($lineSet -and -not $lineSet.Contains($i + 1)) { continue }
-        if ($lines[$i].Trim() -match $valid) { continue }
-        [pscustomobject]@{ File = $repoPath; Line = $i + 1; Text = $lines[$i].Trim() }
+        $text = $lines[$i].Trim()
+        $reason = $null
+        if (-not $text.StartsWith('//')) { $reason = 'code before the comment: Stryker applies it to the next statement' }
+        elseif ($text -notmatch $valid) { $reason = 'no mutator or not in the Stryker format: Stryker ignores it' }
+        if ($reason) { [pscustomobject]@{ File = $repoPath; Line = $i + 1; Text = $text; Reason = $reason } }
     }
 }
 

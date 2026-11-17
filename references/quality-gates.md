@@ -56,7 +56,12 @@ After the fix, run gate 3. The number of surviving mutants must not go up.
 // Stryker disable once Equality: the loop bound is equal for < and <= because the last item is a sentinel
 ```
 
-The format is strict, because Stryker ignores a malformed comment without a warning and the mutant stays alive. Write `// Stryker disable|restore [once] all|<Mutator>,<Mutator>[: <reason>]`: no space after a comma, no space before the colon, one space after the colon. `disable once` covers only the next statement node. To exclude the embedded statement of an `if`, put `disable` and `restore` comments around it:
+Write `// Stryker disable|restore [once] all|<Mutator>,<Mutator>[: <reason>]` on its own line. Stryker 4.16 accepts spaces around the commas and before the colon (checked 2026-11-17). Two mistakes make a comment do something other than what it says, without a warning:
+
+1. No mutator, for example `// Stryker disable once: reason`. Stryker ignores the comment, and the mutant stays alive.
+2. Code before the comment on the same line. Stryker applies the comment to the next statement, not to the code on its own line.
+
+`disable once` covers only the next statement node. To exclude the embedded statement of an `if`, put `disable` and `restore` comments around it:
 
 ```csharp
 // Stryker disable Statement,String: the log text has no test value
@@ -64,7 +69,7 @@ if (verbose) Log("loaded");
 // Stryker restore Statement,String
 ```
 
-Gate 3 checks this format before it runs Stryker. It fails and prints the file and line of each comment that does not match. It also fails when code comes before the comment on the same line.
+Gate 3 checks for these two mistakes before it runs Stryker. It fails and prints the file, the line, and the reason for each comment.
 
 The comment reviewer accepts this comment under comment type 5.
 

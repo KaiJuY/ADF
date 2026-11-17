@@ -88,14 +88,14 @@ $lintErrors = @()
 $lintFiles = Get-StrykerLintFiles
 foreach ($path in $lintFiles.Keys) { $lintErrors += @(Get-StrykerCommentErrors $Repo $path $lintFiles[$path]) }
 if ($lintErrors.Count -gt 0) {
-    foreach ($e in $lintErrors) { Write-Host "$($e.File):$($e.Line): $($e.Text)" }
+    foreach ($e in $lintErrors) { Write-Host "$($e.File):$($e.Line): $($e.Text)  <- $($e.Reason)" }
     $lintMode = 'release'
     if ($Base) { $lintMode = 'development' }
     Write-AdfJson ([pscustomobject]@{
             Mode = $lintMode; Framework = $Framework; Passed = $false; OnChangedLines = @(); Counted = 0; Static = 0
-            MalformedComments = @($lintErrors | ForEach-Object { [pscustomobject]@{ File = $_.File; Line = $_.Line; Text = $_.Text } })
+            MalformedComments = @($lintErrors | ForEach-Object { [pscustomobject]@{ File = $_.File; Line = $_.Line; Text = $_.Text; Reason = $_.Reason } })
         }) (Join-Path $runDir 'gate3.json')
-    Write-Host "GATE 3 FAILED: $($lintErrors.Count) malformed Stryker comment(s). Stryker ignores them. Format: // Stryker disable|restore [once] all|Mutator,Mutator[: reason] (no space after a comma or before the colon). See references/quality-gates.md."
+    Write-Host "GATE 3 FAILED: $($lintErrors.Count) Stryker comment(s) that do not work as written. Format: // Stryker disable|restore [once] all|Mutator,Mutator[: reason], on its own line. See references/quality-gates.md."
     exit 1
 }
 
