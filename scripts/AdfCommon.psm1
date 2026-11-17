@@ -93,7 +93,8 @@ function Resolve-AdfBase([string]$repo, [string]$base) {
 # A line that holds the marker but does not match (a space after a comma, a space before the colon,
 # or code before the comment) is returned as an error. $lineSet limits the check to those line numbers.
 function Get-StrykerCommentErrors([string]$repo, [string]$repoPath, $lineSet) {
-    $valid = '^// Stryker (disable|restore)( once)? (all|[A-Za-z]+(,[A-Za-z]+)*)(: .+)?$'
+    # The lookahead rejects "disable once" with no mutator: without it, "once" matches as a mutator name.
+    $valid = '^// Stryker (disable|restore)( once)? (?!once(,|:|$))(all|[A-Za-z]+(,[A-Za-z]+)*)(: .+)?$'
     $lines = @(Get-Content (Join-Path $repo $repoPath) -Encoding UTF8)
     for ($i = 0; $i -lt $lines.Count; $i++) {
         if ($lines[$i] -notmatch '// Stryker (disable|restore)') { continue }
